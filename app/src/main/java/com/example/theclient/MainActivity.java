@@ -112,7 +112,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     out.write(messageToSend);
                     out.flush();
                 }
+
+
+                String message1 = null;
+                StringBuilder message = new StringBuilder();
+                message.setLength(0);
+
+                input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+
+                while ((message1 = input.readLine()) != null) {
+                    message.append(message1 + "\n");
+
+                    if (message1.equals(("Server: " + messageReceived))) {
+
+                        break;
+                    }else if (message1.equals(messageReceived)){
+                        message.setLength(message.length()-3);
+                        break;
+                    }
+                }
+
+
+
                 socket.close();
+                return message.toString();
+
+
+
             }catch (UnknownHostException e1) {
                 e1.printStackTrace();
             } catch (IOException e1) {
@@ -124,4 +151,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
 
+        @Override
+        protected void onPostExecute(String result) {
+            msgList.addView(textView(result, clientTextColor));
+        }
+    }
 }
