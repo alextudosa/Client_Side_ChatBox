@@ -50,5 +50,44 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    public TextView textView(String message, int color) {
+        if (null == message || message.trim().isEmpty()) {
+            message = "<Empty Message>";
+        }
+        TextView tv = new TextView(this);
+        tv.setTextColor(color);
+        tv.setText(message);
+        tv.setTextSize(20);
+        tv.setPadding(0, 5, 0, 0);
+        return tv;
+    }
+
+
+    @Override
+    public void onClick(View view) {
+
+        if (view.getId() == R.id.connect_server) {
+            final String timeToConnect = "#$";
+            msgList.removeAllViews();
+
+            TheClient theClient = new TheClient();
+            theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, timeToConnect);
+
+
+        }
+
+
+
+        if (view.getId() == R.id.send_data) {
+
+            String clientMessage = edMessage.getText().toString().trim();
+            getInputValue = clientMessage;
+            msgList.removeAllViews();
+            Log.w("The Message IS: ", getInputValue);
+            TheClient theClient = new TheClient();
+            theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, getInputValue);
+
+        }
+    }
 
 }
