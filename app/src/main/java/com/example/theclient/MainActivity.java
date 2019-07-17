@@ -90,4 +90,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    public class TheClient extends AsyncTask<String, Void, String> {
+
+
+        @Override
+        protected String doInBackground(String... Voids) {
+            Socket socket;
+            BufferedReader input;
+            String messageToSend = Voids[0];
+            String messageReceived = Voids[0];
+
+            Log.w("inainte", "MModal");
+
+            try {
+                InetAddress serverAddr = InetAddress.getByName(SERVER_IP);
+                socket = new Socket(serverAddr, SERVERPORT);
+
+                if (null != socket) {
+                    PrintWriter out = new PrintWriter(new BufferedWriter(
+                            new OutputStreamWriter(socket.getOutputStream())));
+                    out.write(messageToSend);
+                    out.flush();
+                }
+                socket.close();
+            }catch (UnknownHostException e1) {
+                e1.printStackTrace();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+
+            return null;
+        }
+
+
+
 }
