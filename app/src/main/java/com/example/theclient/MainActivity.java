@@ -1,10 +1,12 @@
 package com.example.theclient;
 
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -32,6 +34,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private int clientTextColor;
     private EditText edMessage;
     public String getInputValue = "";
+    private String getIpAddr = "";
 
 
 
@@ -47,6 +50,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         handler = new Handler();
         msgList = findViewById(R.id.msgList);
         edMessage = findViewById(R.id.edMessage);
+        WifiManager manager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+        getIpAddr = Formatter.formatIpAddress(manager.getConnectionInfo().getIpAddress());
 
     }
 
@@ -83,7 +88,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             String clientMessage = edMessage.getText().toString().trim();
             getInputValue = clientMessage;
             msgList.removeAllViews();
-            Log.w("The Message IS: ", getInputValue);
             TheClient theClient = new TheClient();
             theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, getInputValue);
 
@@ -100,7 +104,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             String messageToSend = Voids[0];
             String messageReceived = Voids[0];
 
-            Log.w("inainte", "MModal");
 
             try {
                 InetAddress serverAddr = InetAddress.getByName(SERVER_IP);
@@ -124,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 while ((message1 = input.readLine()) != null) {
                     message.append(message1 + "\n");
 
-                    if (message1.equals(("Server: " + messageReceived))) {
+                    if (message1.equals(("Client-" + getIpAddr + ": " + messageReceived))) {
 
                         break;
                     }else if (message1.equals(messageReceived)){
