@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -24,19 +25,20 @@ import java.net.UnknownHostException;
 
 
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, OnTaskCompleteListener {
 
     public static final int SERVERPORT = 8080;
 
     public static final String SERVER_IP = "172.18.81.40";
     private LinearLayout msgList;
-    private Handler handler;
+//    private Handler handler;
     private int clientTextColor;
     private EditText edMessage;
     public String getInputValue = "";
-    private String getIpAddr = "";
-
-
+//    private String getIpAddr = "";
+    public String userName = "";
+    public String password = "";
+    private boolean okOrNot = false;
 
 
 
@@ -47,11 +49,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         setTitle("Client");
         clientTextColor = ContextCompat.getColor(this, R.color.colorPrimary);
-        handler = new Handler();
+//        handler = new Handler();
         msgList = findViewById(R.id.msgList);
         edMessage = findViewById(R.id.edMessage);
-        WifiManager manager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-        getIpAddr = Formatter.formatIpAddress(manager.getConnectionInfo().getIpAddress());
+//        WifiManager manager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+//        getIpAddr = Formatter.formatIpAddress(manager.getConnectionInfo().getIpAddress());
+
 
     }
 
@@ -68,19 +71,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
+
+
+
     @Override
     public void onClick(View view) {
 
         if (view.getId() == R.id.connect_server) {
-            final String timeToConnect = "#$";
-            msgList.removeAllViews();
+            String clientMessage = edMessage.getText().toString().trim();
 
-            TheClient theClient = new TheClient();
-            theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, timeToConnect);
+            if (clientMessage.isEmpty()){
+                Toast.makeText(this, "Wrong username or password!", Toast.LENGTH_LONG).show();
+            }else {
+                String[] partsOfMessageRecv = clientMessage.split(", ");
+                if (partsOfMessageRecv.length != 2){
+                    Toast.makeText(this, "Wrong username or password!", Toast.LENGTH_LONG).show();
+                }else {
+                    this.getInputValue = clientMessage;
+                    final String timeToConnect = this.getInputValue + ", #$";
+                    msgList.removeAllViews();
 
+                    TheClient theClient = new TheClient(this);
+                    theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, timeToConnect);
+                    edMessage.setHint("Write a messagel");
+                }
+            }
 
         }
-
 
 
         if (view.getId() == R.id.send_data) {
