@@ -103,23 +103,56 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (view.getId() == R.id.send_data) {
 
             String clientMessage = edMessage.getText().toString().trim();
-            getInputValue = clientMessage;
-            msgList.removeAllViews();
-            TheClient theClient = new TheClient();
-            theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, getInputValue);
+            if (clientMessage.isEmpty()){
+                Toast.makeText(this, "Empty message not accepted!", Toast.LENGTH_LONG).show();
+            }else {
 
+                String messageSent = this.userName + ", " + this.password + ", " + clientMessage;
+
+
+                msgList.removeAllViews();
+
+                TheClient theClient = new TheClient(this);
+                theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
+            }
         }
     }
 
-    public class TheClient extends AsyncTask<String, Void, String> {
+    @Override
+    public void onTaskComplete(boolean value) {
+            if(value == true){
+                this.okOrNot = true;
+                String clientMessage = (edMessage.getText().toString().trim()) + ", ";
 
+                String[] partsOfMessageRecv = clientMessage.split(", ");
+                this.userName = partsOfMessageRecv[0];
+                this.password = partsOfMessageRecv[1];
+            }
+    }
+
+
+    public class TheClient extends AsyncTask<String, String, String> {
+
+        private OnTaskCompleteListener listener;
+        private boolean loggedOrNot = false;
+
+        public TheClient(OnTaskCompleteListener listener){
+            this.listener = listener;
+        }
 
         @Override
-        protected String doInBackground(String... Voids) {
+        protected String doInBackground(String... args) {
             Socket socket;
             BufferedReader input;
-            String messageToSend = Voids[0];
-            String messageReceived = Voids[0];
+            String messageToSend = args[0];
+            String messageReceived = args[0];
+
+            String[] partsOfMessageRecv = messageReceived.split(", ");
+
+
+            final String userConnectis = partsOfMessageRecv[0];
+            final String messageIs = partsOfMessageRecv[2];
+
 
 
             try {
@@ -144,11 +177,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 while ((message1 = input.readLine()) != null) {
                     message.append(message1 + "\n");
 
-                    if (message1.equals(("Client-" + getIpAddr + ": " + messageReceived))) {
-
+                    if (message1.equals(("Client-" + userConnectis + ": " + messageIs))) {
+                        this.loggedOrNot = false;
                         break;
-                    }else if (message1.equals(messageReceived)){
-                        message.setLength(message.length()-3);
+                    }else if (message1.equals(partsOfMessageRecv[0]) && !(message1.equals("NoAccount"))){
+                        message.setLength(message.length()-5);
+                        this.loggedOrNot = true;
+                        break;
+                    }else if (message1.equals("NoAccount")){
+                        this.loggedOrNot = false;
                         break;
                     }
                 }
@@ -174,6 +211,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         protected void onPostExecute(String result) {
             msgList.addView(textView(result, clientTextColor));
+            if(this.loggedOrNot == false){
+                listener.onTaskComplete(false);
+            }else{
+                listener.onTaskComplete(true);
+            }
+
         }
     }
 }
