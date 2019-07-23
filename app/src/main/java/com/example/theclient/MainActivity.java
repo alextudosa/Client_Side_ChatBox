@@ -3,6 +3,7 @@ package com.example.theclient;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -15,6 +16,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -81,7 +86,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             String clientMessage = edMessage.getText().toString().trim();
 
             if (clientMessage.isEmpty()){
-                Toast.makeText(this, "Wrong username or password!", Toast.LENGTH_LONG).show();
+                if (this.userName != "" && this.password != ""){
+                    msgList.removeAllViews();
+                    String messageSent = this.userName + ", " + this.password + ", #$";
+                    TheClient theClient = new TheClient(this);
+                    theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
+                    edMessage.setHint("Write a message");
+                }else {
+                    File myWorkingDir = new File(Environment.getExternalStorageDirectory() + File.separator, "ChatRoom");
+                    String userAllreadyLogged = "userLogged.txt";
+                    File fileUserLogged = new File(myWorkingDir + File.separator, userAllreadyLogged);
+
+
+                    try {
+                        BufferedReader text = new BufferedReader(new FileReader(fileUserLogged));
+                        String line;
+                        while ((line = text.readLine()) != null) {
+
+                            String[] credentials = line.split(", ");
+                            this.userName = credentials[0];
+                            this.password = credentials[1];
+                        }
+                        text.close();
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    String messageSent = this.userName + ", " + this.password + ", #$";
+                    TheClient theClient = new TheClient(this);
+                    theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
+                    edMessage.setHint("Write a message");
+                }
             }else {
                 String[] partsOfMessageRecv = clientMessage.split(", ");
                 if (partsOfMessageRecv.length != 2){
@@ -93,7 +130,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     TheClient theClient = new TheClient(this);
                     theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, timeToConnect);
-                    edMessage.setHint("Write a messagel");
+                    edMessage.setHint("Write a message");
                 }
             }
 
@@ -120,14 +157,93 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onTaskComplete(boolean value) {
-            if(value == true){
-                this.okOrNot = true;
-                String clientMessage = (edMessage.getText().toString().trim()) + ", ";
+        if (value == true) {
 
+            String checkClientMessage = edMessage.getText().toString().trim();
+            String savedUserName = "";
+            String savedPassword = "";
+            if (checkClientMessage.isEmpty()){
+                savedUserName = this.userName;
+                savedPassword = this.password;
+            }else {
+                String clientMessage = (edMessage.getText().toString().trim()) + ", ";
                 String[] partsOfMessageRecv = clientMessage.split(", ");
-                this.userName = partsOfMessageRecv[0];
-                this.password = partsOfMessageRecv[1];
+                savedUserName = partsOfMessageRecv[0];
+                savedPassword = partsOfMessageRecv[1].trim();
             }
+
+
+            String createFileName = "credentials.txt";
+            String userAllreadyLogged = "userLogged.txt";
+
+
+            File myWorkingDir = new File(Environment.getExternalStorageDirectory() + File.separator, "ChatRoom");
+            File file = new File(myWorkingDir + File.separator, createFileName);
+            File fileUserLogged = new File(myWorkingDir + File.separator, userAllreadyLogged);
+
+
+            try {
+                boolean notFoundInDB = false;
+
+
+                Log.w("AICI AM AJUNS", String.valueOf(file));
+                if (!myWorkingDir.exists()) {
+                    file.getParentFile().mkdirs();
+                }
+
+                if (!fileUserLogged.exists()){
+                    fileUserLogged.createNewFile();
+                }
+
+                if (!file.exists()) {
+                    FileOutputStream writeInFile = new FileOutputStream(file);
+                    file.createNewFile();
+                    writeInFile.write((savedUserName + ", " + savedPassword + ", \n").getBytes());
+                    this.userName = savedUserName;
+                    this.password = savedPassword;
+                    writeInFile.close();
+                    FileOutputStream writeInFileUserLogged = new FileOutputStream(fileUserLogged);
+                    writeInFileUserLogged.write((savedUserName + ", " + savedPassword.trim() + ", \n").getBytes());
+                    writeInFileUserLogged.close();
+
+                }else {
+                    BufferedReader text = new BufferedReader(new FileReader(file));
+                    String line;
+                    while((line = text.readLine()) != null) {
+
+                        String[] credentials = line.split(", ");
+                        if (credentials[0].equals(savedUserName) && credentials[1].trim().equals(savedPassword)){
+                            this.userName = savedUserName;
+                            this.password = savedPassword;
+                            text.close();
+                            notFoundInDB = false;
+                            FileOutputStream writeInFileUserLogged = new FileOutputStream(fileUserLogged);
+                            writeInFileUserLogged.write((savedUserName + ", " + savedPassword + ", \n").getBytes());
+                            writeInFileUserLogged.close();
+                            break;
+
+                        }else {
+                            notFoundInDB = true;
+                        }
+                    }
+                    if (notFoundInDB == true){
+                        text.close();
+                        FileOutputStream writeInFile = new FileOutputStream(file, true);
+                        writeInFile.write(("\n" + savedUserName + ", " + savedPassword + ", \n").getBytes());
+                        this.userName = savedUserName;
+                        this.password = savedPassword;
+                        writeInFile.close();
+                        FileOutputStream writeInFileUserLogged = new FileOutputStream(fileUserLogged);
+                        writeInFileUserLogged.write((savedUserName + ", " + savedPassword + ", \n").getBytes());
+                        writeInFileUserLogged.close();
+                        notFoundInDB = false;
+                    }
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 
