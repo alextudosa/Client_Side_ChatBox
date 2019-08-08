@@ -1,19 +1,17 @@
 package com.example.theclient;
 
-import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -21,13 +19,24 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-
+import java.security.GeneralSecurityException;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, OnTaskCompleteListener {
@@ -273,11 +282,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             try {
                 InetAddress serverAddr = InetAddress.getByName(SERVER_IP);
-                socket = new Socket(serverAddr, SERVERPORT);
 
-                if (null != socket) {
+                InputStream is = getResources().openRawResource(R.raw.client);
+                InputStream clientCert = new BufferedInputStream(is);
+
+                InputStream serv = getResources().openRawResource(R.raw.server);
+                InputStream serverCert = new BufferedInputStream(serv);
+
+                KeyStore storeServer = KeyStore.getInstance("BKS");
+                storeServer.load(serverCert, "123456".toCharArray());
+                TrustManagerFactory tmf = TrustManagerFactory
+                        .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                tmf.init(storeServer);
+
+                KeyStore store = KeyStore.getInstance("BKS");
+                store.load(clientCert, "123456".toCharArray());
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance("X509");
+                kmf.init(store, null);
+
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+                SSLSocketFactory sf = sslContext.getSocketFactory();
+                SSLSocket sslSocket = (SSLSocket) sf.createSocket(serverAddr, SERVERPORT);
+                sslSocket.setUseClientMode(true);
+                if (null != sslSocket) {
                     PrintWriter out = new PrintWriter(new BufferedWriter(
-                            new OutputStreamWriter(socket.getOutputStream())));
+                            new OutputStreamWriter(sslSocket.getOutputStream())));
                     out.write(messageToSend);
                     out.flush();
                 }
@@ -287,7 +317,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 StringBuilder message = new StringBuilder();
                 message.setLength(0);
 
-                input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                input = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
 
 
                 while ((message1 = input.readLine()) != null) {
@@ -308,7 +338,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
 
-                socket.close();
+                sslSocket.close();
                 return message.toString();
 
 
@@ -317,6 +347,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 e1.printStackTrace();
             } catch (IOException e1) {
                 e1.printStackTrace();
+            } catch (CertificateException e) {
+                e.printStackTrace();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (KeyStoreException e) {
+                e.printStackTrace();
+            } catch (KeyManagementException e) {
+                e.printStackTrace();
+            }  catch (GeneralSecurityException e) {
+                e.printStackTrace();
             }
 
             return null;
