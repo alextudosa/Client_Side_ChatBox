@@ -55,11 +55,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //    private Handler handler;
     private int clientTextColor;
     private static EditText edMessage;
+    private static EditText talkTo;
     private ScrollView myScrollView;
-    public String getInputValue = "";
+    public String stoprefresh = "";
 //    private String getIpAddr = "";
     public String userName = "";
     public String password = "";
+    public String talkingTo = "";
     private boolean issConnected;
 
 
@@ -74,6 +76,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        handler = new Handler();
         msgList = findViewById(R.id.msgList);
         edMessage = findViewById(R.id.edMessage);
+        talkTo = findViewById(R.id.talkTo);
         myScrollView = findViewById(R.id.myScrollView);
 //        WifiManager manager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
 //        getIpAddr = Formatter.formatIpAddress(manager.getConnectionInfo().getIpAddress());
@@ -102,16 +105,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         if (view.getId() == R.id.connect_server) {
             String clientMessage = edMessage.getText().toString().trim();
+            String talkingToWho = talkTo.getText().toString().trim();
 
-            if (clientMessage.isEmpty()){
-                if (this.userName != "" && this.password != ""){
+            if (clientMessage.isEmpty() && talkingToWho.isEmpty()){
+                if (this.userName != "" && this.password != "" && this.talkingTo != ""){
                     msgList.removeAllViews();
-                    String messageSent = this.userName + ", " + this.password + ", connect" + ", ";
+                    String messageSent = this.userName + ", " + this.password + ", connect, " + this.talkingTo + ", ";
                     TheClient theClient = new TheClient(this);
                     theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
                     edMessage.setHint("Write a message");
                     callAsynchronousTask();
                     edMessage.getText().clear();
+                    talkTo.getText().clear();
                     typingIndicator();
                 }else {
                     File myWorkingDir = new File(Environment.getExternalStorageDirectory() + File.separator, "ChatRoom");
@@ -127,6 +132,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             String[] credentials = line.split(", ");
                             this.userName = credentials[0];
                             this.password = credentials[1];
+                            this.talkingTo = credentials[2];
                         }
                         text.close();
                     } catch (FileNotFoundException e) {
@@ -135,12 +141,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         e.printStackTrace();
                     }
 
-                    String messageSent = this.userName + ", " + this.password + ", connect" + ", ";
+                    String messageSent = this.userName + ", " + this.password + ", connect, " + this.talkingTo + ", ";
                     TheClient theClient = new TheClient(this);
                     theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
                     edMessage.setHint("Write a message");
                     callAsynchronousTask();
                     edMessage.getText().clear();
+                    talkTo.getText().clear();
                     typingIndicator();
                 }
             }else {
@@ -148,36 +155,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (partsOfMessageRecv.length != 2){
                     Toast.makeText(this, "Wrong username or password!", Toast.LENGTH_LONG).show();
                 }else {
-                    this.getInputValue = clientMessage;
-                    final String timeToConnect = this.getInputValue + ", connect" + ", ";
+
+                    this.userName = partsOfMessageRecv[0];
+                    this.password = partsOfMessageRecv[1];
+                    this.talkingTo = talkingToWho;
+                    final String timeToConnect = this.userName + ", " + this.password + ", connect, " + this.talkingTo + ", ";
                     msgList.removeAllViews();
 
                     TheClient theClient = new TheClient(this);
                     theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, timeToConnect);
-                    edMessage.setHint("Write a message");
-                    callAsynchronousTask();
-                    typingIndicator();
+
+                    if(!(this.stoprefresh.equals("ok"))) {
+                        Log.w("AICI ", "SUNT");
+                        Log.w("AICI ", this.stoprefresh);
+                        edMessage.setHint("Write a message");
+                        callAsynchronousTask();
+                        typingIndicator();
+                    }
                 }
 
             }
         }
-
-
         if (view.getId() == R.id.send_data) {
 
             String clientMessage = edMessage.getText().toString().trim();
             if (clientMessage.isEmpty()){
                 Toast.makeText(this, "Empty message not accepted!", Toast.LENGTH_LONG).show();
             }else {
-
-
-
                 msgList.removeAllViews();
-                String messageSent = this.userName + ", " + this.password + ", new message" + ", " + clientMessage;
-
+                String messageSent = this.userName + ", " + this.password + ", new message, " + this.talkingTo + ", " + clientMessage;
                 TheClient theClient = new TheClient(this);
                 theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
                 edMessage.getText().clear();
+                talkTo.getText().clear();
                 callAsynchronousTask();
                 typingIndicator();
             }
@@ -195,44 +205,49 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 public void afterTextChanged(Editable s) {
                     final Handler handler = new Handler();
                     Timer timer = new Timer();
-                    TimerTask doAsynchronousTask = new TimerTask() {
-                        @Override
-                        public void run() {
-                            handler.post(new Runnable() {
-                                public void run() {
-                                    MainActivity mainActivity = new MainActivity();
+                    if (s.length() > 0) {
+                        TimerTask doAsynchronousTask = new TimerTask() {
+                            @Override
+                            public void run() {
+                                handler.post(new Runnable() {
+                                    public void run() {
+                                        MainActivity mainActivity = new MainActivity();
 
-                                    String userAllreadyLogged = "userLogged.txt";
-                                    File myWorkingDir = new File(Environment.getExternalStorageDirectory() + File.separator, "ChatRoom");
-                                    File fileUserLogged = new File(myWorkingDir + File.separator, userAllreadyLogged);
-                                    BufferedReader text = null;
-                                    String userName1 = "";
-                                    String password1 = "";
-                                    try {
-                                        text = new BufferedReader(new FileReader(fileUserLogged));
+                                        String userAllreadyLogged = "userLogged.txt";
+                                        File myWorkingDir = new File(Environment.getExternalStorageDirectory() + File.separator, "ChatRoom");
+                                        File fileUserLogged = new File(myWorkingDir + File.separator, userAllreadyLogged);
+                                        BufferedReader text = null;
+                                        String userName1 = "";
+                                        String password1 = "";
+                                        String talkingToWho = "";
+                                        try {
+                                            text = new BufferedReader(new FileReader(fileUserLogged));
 
-                                        String line;
-                                        while ((line = text.readLine()) != null) {
+                                            String line;
+                                            while ((line = text.readLine()) != null) {
 
-                                            String[] credentials = line.split(", ");
-                                            userName1 = credentials[0];
-                                            password1 = credentials[1];
+                                                String[] credentials = line.split(", ");
+                                                userName1 = credentials[0];
+                                                password1 = credentials[1];
+                                                talkingToWho = credentials[2];
+                                            }
+
+                                            String messageSent = userName1 + ", " + password1 + ", not typing, " + talkingToWho + ", ";
+                                            TheClient theClient = new TheClient(mainActivity);
+
+                                            theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
+                                        } catch (FileNotFoundException e) {
+                                            e.printStackTrace();
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
                                         }
-
-                                        String messageSent = userName1 + ", " + password1 + ", not typing" + ", ";
-                                        TheClient theClient = new TheClient(mainActivity);
-                                        theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
-                                    } catch (FileNotFoundException e) {
-                                        e.printStackTrace();
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
                                     }
-                                }
-                            });
+                                });
 
-                        }
-                    };
-                    timer.schedule(doAsynchronousTask, 3000);
+                            }
+                        };
+                        timer.schedule(doAsynchronousTask, 3000);
+                    }
                 }
 
                     @Override
@@ -252,6 +267,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     BufferedReader text = null;
                     String userName1 = "";
                     String password1 = "";
+                    String talkingToWho = "";
                     try {
                         text = new BufferedReader(new FileReader(fileUserLogged));
 
@@ -261,10 +277,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             String[] credentials = line.split(", ");
                             userName1 = credentials[0];
                             password1 = credentials[1];
+                            talkingToWho = credentials[2];
                         }
                     if(s.length() != 0 ){
-                        Log.w("Sunt in", "TYPING INDICATOR");
-                        String messageSent = userName1 + ", " + password1 + ", typing" + ", ";
+                        String messageSent = userName1 + ", " + password1 + ", typing, " + talkingToWho + ", ";
                         TheClient theClient = new TheClient(mainActivity);
                         theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
                     }
@@ -298,6 +314,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             BufferedReader text = null;
                             String userName1 = "";
                             String password1 = "";
+                            String talkingToWho = "";
                             text = new BufferedReader(new FileReader(fileUserLogged));
 
                             String line;
@@ -306,11 +323,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 String[] credentials = line.split(", ");
                                 userName1 = credentials[0];
                                 password1 = credentials[1];
+                                talkingToWho = credentials[2];
 
                             }
                             msgList.removeAllViews();
                             MainActivity mainActivity = new MainActivity();
-                            String messageSent = userName1 + ", " + password1 + ", refresh" + ", ";
+                            String messageSent = userName1 + ", " + password1 + ", refresh, " + talkingToWho + ", ";
                             TheClient theClient = new TheClient(mainActivity);
                             theClient.executeOnExecutor(TheClient.SERIAL_EXECUTOR, messageSent);
 
@@ -322,27 +340,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 });
             }
         };
-        timer.schedule(doAsynchronousTask, 2000, 5000); //execute in every n ms
+        timer.schedule(doAsynchronousTask, 1000, 5000); //execute in every n ms
     }
 
 
     @Override
     public void onTaskComplete(int value) {
         try {
-//            String createFileName = "credentials.txt";
             String userAllreadyLogged = "userLogged.txt";
             File myWorkingDir = new File(Environment.getExternalStorageDirectory() + File.separator, "ChatRoom");
 //            File file = new File(myWorkingDir + File.separator, createFileName);
             File fileUserLogged = new File(myWorkingDir + File.separator, userAllreadyLogged);
         String savedUserName = "";
         String savedPassword = "";
+        String savedUserTalkingTo = "";
 
         if (value == 0) {
 
+            String talkingToWho = talkTo.getText().toString().trim();
             String clientMessage1 = (edMessage.getText().toString().trim()) + ", ";
             String[] partsOfMessageRecv1 = clientMessage1.split(", ");
 
-            if (TextUtils.isEmpty(edMessage.getText().toString().trim()) && fileUserLogged.exists()){
+            if (TextUtils.isEmpty(edMessage.getText().toString().trim()) && TextUtils.isEmpty(talkingToWho) && fileUserLogged.exists()){
                 BufferedReader text = null;
                 text = new BufferedReader(new FileReader(fileUserLogged));
 
@@ -352,9 +371,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     String[] credentials = line.split(", ");
                     savedUserName = credentials[0];
                     savedPassword = credentials[1];
+                    savedUserTalkingTo = credentials[2];
 
                 }
-            }else if(!(TextUtils.isEmpty(edMessage.getText().toString().trim())) && fileUserLogged.exists() && partsOfMessageRecv1.length != 2){
+            }else if(!(TextUtils.isEmpty(edMessage.getText().toString().trim())) && fileUserLogged.exists() && partsOfMessageRecv1.length != 2 && !(TextUtils.isEmpty(talkingToWho))){
                 BufferedReader text = null;
                 text = new BufferedReader(new FileReader(fileUserLogged));
 
@@ -362,14 +382,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 while((line = text.readLine()) != null) {
 
                     String[] credentials = line.split(", ");
-                    savedUserName = credentials[0];
-                    savedPassword = credentials[1];
+                    savedUserName = partsOfMessageRecv1[0];
+                    savedPassword = partsOfMessageRecv1[1];
+                    savedUserTalkingTo = talkingToWho;
                 }
             }else {
                 savedUserName = partsOfMessageRecv1[0];
                 savedPassword = partsOfMessageRecv1[1].trim();
+                savedUserTalkingTo = talkingToWho;
 
             }
+            this.stoprefresh = "no";
         }else if(value == 1){
             BufferedReader text = null;
             text = new BufferedReader(new FileReader(fileUserLogged));
@@ -380,49 +403,70 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 String[] credentials = line.split(", ");
                 savedUserName = credentials[0];
                 savedPassword = credentials[1];
-
+                savedUserTalkingTo = credentials[2];
+                this.stoprefresh = "no";
             }
+        }else if (value == 2){
+            this.stoprefresh = "ok";
+            String talkingToWho = talkTo.getText().toString().trim();
+            String clientMessage1 = (edMessage.getText().toString().trim()) + ", ";
+            String[] partsOfMessageRecv1 = clientMessage1.split(", ");
+            savedUserName = partsOfMessageRecv1[0];
+            savedPassword = partsOfMessageRecv1[1].trim();
+            savedUserTalkingTo = talkingToWho;
         }
 
+//                ----------------------------------
 
-                boolean notFoundInDB = false;
+            boolean notFoundInDB = false;
 
+            if (!myWorkingDir.exists()) {
+                   fileUserLogged.getParentFile().mkdirs();
+               }
 
-                if (!myWorkingDir.exists()) {
-                    fileUserLogged.getParentFile().mkdirs();
-                }
+            if (!fileUserLogged.exists()) {
+                fileUserLogged.createNewFile();
+            }
 
-                if (!fileUserLogged.exists()){
+            BufferedReader text = new BufferedReader(new FileReader(fileUserLogged));
+            String line;
+            String[] credentialscount = new String[0];
+            while((line = text.readLine()) != null) {
+                credentialscount = line.split(", ");
+            }
+
+                if (credentialscount.length == 0 || credentialscount.length < 3 || !(savedUserTalkingTo.equals(credentialscount[2])) ) {
                     fileUserLogged.createNewFile();
                     FileOutputStream writeInFileUserLogged = new FileOutputStream(fileUserLogged);
-                    writeInFileUserLogged.write((savedUserName + ", " + savedPassword.trim() + ", \n").getBytes());
+                    writeInFileUserLogged.write((savedUserName + ", " + savedPassword.trim() + ", " + savedUserTalkingTo + ", \n").getBytes());
                     this.userName = savedUserName;
                     this.password = savedPassword;
+                    this.talkingTo = savedUserTalkingTo;
                     writeInFileUserLogged.close();
 
-                }else {
-                    BufferedReader text = new BufferedReader(new FileReader(fileUserLogged));
-                    String line;
-                    while((line = text.readLine()) != null) {
+                } else {
+
+                    while ((line = text.readLine()) != null) {
 
                         String[] credentials = line.split(", ");
-
-                        if (credentials[0].equals(savedUserName) && credentials[1].trim().equals(savedPassword) && credentials.length == 2){
+                        if (credentials[0].equals(savedUserName) && credentials[1].trim().equals(savedPassword) && credentials.length == 3) {
                             this.userName = savedUserName;
                             this.password = savedPassword;
+                            this.talkingTo = savedUserTalkingTo;
                             text.close();
                             notFoundInDB = false;
                             break;
 
-                        }else {
+                        } else {
                             notFoundInDB = true;
                         }
-                        if (notFoundInDB == true){
+                        if (notFoundInDB == true) {
                             text.close();
                             FileOutputStream writeInFileUserLogged = new FileOutputStream(fileUserLogged);
-                            writeInFileUserLogged.write((savedUserName + ", " + savedPassword + ", \n").getBytes());
+                            writeInFileUserLogged.write((savedUserName + ", " + savedPassword + ", " + savedUserTalkingTo + ", \n").getBytes());
                             this.userName = savedUserName;
                             this.password = savedPassword;
+                            this.talkingTo = savedUserTalkingTo;
                             writeInFileUserLogged.close();
                             notFoundInDB = false;
                         }
@@ -499,23 +543,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 while ((message1 = input.readLine()) != null) {
                     message.append(message1 + "\n");
-                    if (message1.equals((protocol)) && (protocol.equals("new message")) && !(message1.equals("NoAccount"))) {
+                    if (message1.equals((protocol)) && (protocol.equals("new message")) && !(message1.equals("NoAccount")) && !(message1.equals("Cannot Talk To Yourself!")) && !(message1.equals("No user to talk to!"))) {
                         message.setLength(message.length()-12);
                         this.loggedOrNot = 1;
                         break;
-                    }else if (message1.equals(protocol) && !(message1.equals("NoAccount")) && (protocol.equals("connect"))){
+                    }else if (message1.equals(protocol) && !(message1.equals("NoAccount")) && (protocol.equals("connect")) && !(message1.equals("Cannot Talk To Yourself!")) && !(message1.equals("No user to talk to!"))){
                         message.setLength(message.length()-8);
                         this.loggedOrNot = 0;
                         break;
-                    }else if(message1.equals(userConnectis + " is typing...") && protocol.equals("typing")) {
+                    }else if(message1.equals(userConnectis + " is typing...") && protocol.equals("typing") && !(message1.equals("Cannot Talk To Yourself!")) && !(message1.equals("No user to talk to!"))) {
                         message.setLength(message.length()-22);
                         this.loggedOrNot = 1;
                         break;
-                    }else if(message1.equals(protocol) && protocol.equals("typing")) {
-                        message.setLength(message.length()-10);
+                    }else if(message1.equals(protocol) && protocol.equals("typing") && !(message1.equals("Cannot Talk To Yourself!")) && !(message1.equals("No user to talk to!"))) {
+                        message.setLength(message.length()-7);
                         this.loggedOrNot = 1;
                         break;
-                    }else if(message1.equals(protocol) && protocol.equals("not typing")) {
+                    }else if(message1.equals(protocol) && protocol.equals("not typing") && !(message1.equals("Cannot Talk To Yourself!")) && !(message1.equals("No user to talk to!"))) {
                         Log.w("Am intrat aici", message1);
                         message.setLength(message.length()-11);
                         this.loggedOrNot = 1;
@@ -523,43 +567,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }else if (message1.equals("NoAccount")){
                         this.loggedOrNot = 2;
                         break;
-                    }else if (message1.equals(protocol) && protocol.equals("refresh")) {
+                    }else if (message1.equals("No user to talk to!")){
+                        this.loggedOrNot = 2;
+                        break;
+                    }else if (message1.equals("Cannot Talk To Yourself!")){
+                        this.loggedOrNot = 2;
+                        break;
+                    }else if (message1.equals(protocol) && protocol.equals("refresh") && !(message1.equals("Cannot Talk To Yourself!")) && !(message1.equals("No user to talk to!"))) {
                         message.setLength(message.length()-8);
                         this.loggedOrNot = 1;
                         break;
                     }
-
-                    /*if (message1.equals(("Client-" + userConnectis + ": " + messageIs)) && !(message1.contains("@$DSC*&&6"))) {
-                        this.loggedOrNot = 1;
-                        break;
-                    }else if (message1.equals(protocol) && !(message1.equals("NoAccount")) && !(message1.contains("@$DSC*&&6"))){
-                        message.setLength(message.length()-5);
-                        this.loggedOrNot = 0;
-                        break;
-                    }else if(message1.equals(partsOfMessageRecv[0] + " is typing...@$DSC*&&6")) {
-                        message.setLength(message.length()-27);
-                        this.loggedOrNot = 1;
-                        break;
-                    }else if(message1.contains("@$DSC*&&6")) {
-                        message.setLength(message.length()-10);
-                        this.loggedOrNot = 1;
-                        break;
-                    }else if(message1.contains("WV%^$0(*~")) {
-                        message.setLength(message.length()-10);
-                        this.loggedOrNot = 1;
-                        break;
-                    }else if (message1.equals("NoAccount")){
-                        this.loggedOrNot = 2;
-                        break;
-                    }else if (message1.equals("refresh$$%#X")) {
-                        message.setLength(message.length()-13);
-                        this.loggedOrNot = 1;
-                        break;
                 }
 
-
-
                 sslSocket.close();
+
                 return message.toString();
 
 
